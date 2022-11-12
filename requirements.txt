@@ -1,0 +1,14 @@
+retrying
+fastapi
+uvicorn[standard]
+pydantic[email]
+sqlmodel
+pyjwt[crypto]
+sendgrid
+psycopg2-binary
+boto3
+hnswlib
+requests
+psutil
+gunicorn
+numpy
