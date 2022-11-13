@@ -112,5 +112,5 @@ def get_vectors(token: str = Depends(token_auth_scheme),
         vector = session.exec(statement).first()
         if not vector:
             raise HTTPException(status_code=404, detail="Vector not found")
-        return VectorResponse(vector)
+        return VectorResponse(**vector.dict())
 
