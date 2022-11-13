@@ -92,8 +92,7 @@ class  VectorPostRequest(BaseModel):
     
 class VectorResponse(BaseModel):
     collection_id: int = Field(description='The collection that this vector belongs to.')
-    created_at: timestamp = Field(default_factory=time, description='The epoch timestamp when the vector was created.')
-    
+    created_at: timestamp = Field(default_factory=time, description='The epoch timestamp when the vector was created.')    
     vector: List[float] = Field(description='The user-supplied vector element.')
     vector_id:  int     = Field(description='The user-supplied id for this vector element.')
 

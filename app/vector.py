@@ -50,7 +50,7 @@ def post_vectors(token: str = Depends(token_auth_scheme),
         vector = session.exec(statement).first()
         if vector:
             session.delete(vector)   # replace the existing vector with the same key
-            collection.count -= 1
+            collection.count = Collection.count - 1
         if collection.dimension == 0:
             # update dimension to the actual length of the vector
             collection.dimension = len(body.vector)
@@ -63,7 +63,7 @@ def post_vectors(token: str = Depends(token_auth_scheme),
         vector = Vector(vector_id = vector_id,
                         collection_id = collection_id,
                         vector = body.vector)
-        collection.count += 1        
+        collection.count = Collection.count + 1        
         collection.updated_at = time()
         session.add(collection)
         session.add(vector)
@@ -89,7 +89,7 @@ def delete_vectors(token: str = Depends(token_auth_scheme),
         if not vector:
             raise HTTPException(status_code=404, detail="Vector not found")
         session.delete(vector)
-        collection.count -= 1
+        collection.count = Collection.count - 1
         collection.updated_at = time()
         session.add(collection)
         session.commit()
