@@ -73,10 +73,10 @@ def _create_index(index):
 
         INDEX_SIZE_BYTES = os.stat(filename).st_size
         index.completed_at = time()
-        index.build_status = "Index build of %d (dimension %d) vectors completed in %d seconds generating %d MB index." % (len(vectors),
-                                                                                                                           collection.dimension,
-                                                                                                                           HNSW_INDEX_CREATE_TIME,
-                                                                                                                           INDEX_SIZE_BYTES/1024/1024)
+        index.build_status = "Index build of %d (dimension %d) vectors completed in %.1f seconds generating %.1f MB index." % (len(vectors),
+                                                                                                                               collection.dimension,
+                                                                                                                               HNSW_INDEX_CREATE_TIME,
+                                                                                                                               INDEX_SIZE_BYTES/1024/1024)
         index.state = IndexBuildState.complete
         bucket.upload_file(filename, index.objkey)
 
