@@ -12,3 +12,4 @@ requests
 psutil
 gunicorn
 numpy
+scikit-learn

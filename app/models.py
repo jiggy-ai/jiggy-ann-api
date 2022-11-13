@@ -141,8 +141,10 @@ class Index(SQLModel, table=True):
     target_library:    IndexLibraries = Field(sa_column=Column(Enum(IndexLibraries)))
     metric:            DistanceMetric = Field(sa_column=Column(Enum(DistanceMetric)))
     
-    hnswlib_M:  int   = Field(default=None, ge=2, description="The M value passed to hnswlib when creating the index.")
-    hnswlib_ef: int   = Field(default=None, ge=10, description="The ef_construction value passed to hnswlib when creating the index.")
+    hnswlib_M:  Optional[int]   = Field(default=None, ge=2, description="The M value passed to hnswlib when creating the index.")
+    hnswlib_ef: Optional[int]   = Field(default=None, ge=10, description="The ef_construction value passed to hnswlib when creating the index.")
+    hnswlib_ef_search: Optional[int] = Field(default=None, ge=10, description="The recommended ef value to use at search time.")
+    target_recall: Optional[float] = Field(default=None, ge=0.5, le=1, description="The desired recall value to target for index parameter optimization.")
     
     count: int = Field(default=0, description="The number of vectors included in the index.  The number of vectors in the collection at the time of index build.")
     
@@ -162,8 +164,21 @@ class IndexRequest(BaseModel):
     tag: str = Field(default='latest', description="User tag for this Index.  Uniquely identifies an index in the context of a collection.")
     target_library:    IndexLibraries = Field(default=IndexLibraries.hnswlib, description="The library use to create the index")
     metric:     Optional[str] = Field(default='cosine', description='The distance metric ("space" in hnswlib): "cosine", "ip", or "l2"')
-    hnswlib_M:  int  = Field(default=None, description="The M value passed to hnswlib when creating the index.")
-    hnswlib_ef: int  = Field(default=None, description="The ef_construction value passed to hnswlib when creating the index")
+    hnswlib_M:  Optional[int]  = Field(default=None, description="The M value passed to hnswlib when creating the index.")
+    hnswlib_ef: Optional[int]  = Field(default=None, description="The ef_construction value passed to hnswlib when creating the index")
+    target_recall: Optional[float] = Field(default=None, description="The desired recall value to target for index parameter optimization.")
+
+    @validator('target_recall')
+    def _target_recall(cls, value, values):
+        if value is None:
+            if values['hnswlib_M'] is None or values['hnswlib_ef'] is None:
+                raise ValueError('If target_recall is non specified then both hnswlib_M and hnswlib_ef must be specified')
+        if value < .5 or value > 1:
+            raise ValueError('target_recall must be between 0.5 and 1')
+        if values['hnswlib_M'] is not None or values['hnswlib_ef'] is not None:
+            raise ValueError('If target_recall is specified then both hnswlib_M and hnswlib_ef must be None (unspecified)')
+        return value
+    
     @validator('tag')
     def _tag(cls, v):
         _is_valid_namestr(v, 'tag')
@@ -179,12 +194,14 @@ class IndexResponse(BaseModel):
     metric:        str = Field(description='The distance metric ("space" in hnswlib): "cosine", "ip", or "l2"')
     hnswlib_M:  Optional[int] = Field(default=None, description="The M value passed to hnswlib when creating the index.")
     hnswlib_ef: Optional[int]  = Field(default=None, description="The ef_construction value passed to hnswlib when creating the index.")
+    hnswlib_ef_search: Optional[int] = Field(default=None, ge=10, description="The recommended ef value to use at search time.")
+    target_recall: Optional[float] = Field(default=None, ge=0.5, le=1, description="The desired recall value to target for index parameter optimization.")    
     count: int = Field(description="The number of vectors included in the index.  The number of vectors in the collection at the time of index build.")
     created_at: float = Field(description='The epoch timestamp when the index was requested to be created.')
     state: IndexBuildState = Field(description = "The current build status.")
     completed_at: float = Field(description='The epoch timestamp when the index build was completed.')
     build_status: str     = Field(description='Informational status message for the index build.')
-    url: Optional[str] = Field(default=None, description='The url the index can be downloaded from.  The url is valid for a limited time.')
+    url: Optional[str] = Field(default=None, description='The url the index can be downloaded from. The url is valid for a limited time.')
 
 
 

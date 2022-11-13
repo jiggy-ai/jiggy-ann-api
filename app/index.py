@@ -22,7 +22,7 @@ import hnswlib
 import psutil
 from decimal import Decimal
 import numpy as np
-
+from optimizer import optimize_hnswlib_params
 from s3 import  create_presigned_url, bucket
 
 from main import app, engine, token_auth_scheme
@@ -38,7 +38,7 @@ CPU_COUNT = psutil.cpu_count()
 
 def _create_index(index):
     with Session(engine) as session:
-        print("create_index")
+        print("create_index:", index)
         session.add(index)
         index.build_status = "Preparing data for indexing."
         index.state = IndexBuildState.prep
@@ -49,18 +49,38 @@ def _create_index(index):
 
         index.state = IndexBuildState.indexing
         index.count = len(vectors)
-        index.build_status = "Index build of %d (dimension %d) vectors in progress." % (len(vectors),
+        # autoselect index parameters using learned model if target_recall has been specified
+        if index.target_recall:
+            index.build_status = "Autoselecting index parameters."
+            session.commit()
+            opt = optimize_hnswlib_params(collection.dimension, index.count, index.target_recall)
+            index.completed_at = time() + opt['creation_seconds']
+            index.hnswlib_M = opt['index_M']
+            index.hnswlib_ef = opt['index_ef_construction']
+            index.hnswlib_ef_search = opt['test_ef']
+
+        if index.hnswlib_ef_search is None:
+            index.hnswlib_ef_search = index.hnswlib_ef
+
+        index.build_status = "Index build of %d (dimension %d) vectors in progress." % (index.count,
                                                                                         collection.dimension)
         session.commit()
         
+        t0 = time()
         hnsw_index = hnswlib.Index(space=index.metric, dim=collection.dimension)
         hnsw_index.set_num_threads(int(CPU_COUNT/2))
-        hnsw_index.init_index(max_elements=len(vectors),
-                              ef_construction=index.hnswlib_ef,
+        
+        hnsw_index.init_index(max_elements=index.count,
+                              ef_construction= index.hnswlib_ef,
                               M=index.hnswlib_M)
-        t0 = time()
-        for v in vectors:
-            hnsw_index.add_items([v.vector], [v.vector_id])
+
+        vv = [v.vector for v in vectors]
+        ids = [v.vector_id for v in vectors]
+        hnsw_index.add_items(vv, ids)
+
+        #for v in vectors:
+        #    hnsw_index.add_items([v.vector], [v.vector_id])
+        #    # XXX add progress percentage update
 
         index.build_status = "Saving index."
         index.state = IndexBuildState.saving
@@ -69,11 +89,11 @@ def _create_index(index):
         filename = "index-%d.hnsf" % index.id
         hnsw_index.save_index(filename)
         import hashlib
-        print(hashlib.md5(open(filename,'rb').read()).hexdigest())
-
+        print("saved index md5=", hashlib.md5(open(filename,'rb').read()).hexdigest())
+        
         INDEX_SIZE_BYTES = os.stat(filename).st_size
         index.completed_at = time()
-        index.build_status = "Index build of %d (dimension %d) vectors completed in %.1f seconds generating %.1f MB index." % (len(vectors),
+        index.build_status = "Index build of %d (dimension %d) vectors completed in %.1f seconds generating %.1f MB index." % (index.count,
                                                                                                                                collection.dimension,
                                                                                                                                HNSW_INDEX_CREATE_TIME,
                                                                                                                                INDEX_SIZE_BYTES/1024/1024)
@@ -83,22 +103,27 @@ def _create_index(index):
         session.commit()
         print("test")
         # Test the Index
-        hnsw_index.set_ef(index.hnswlib_ef)
+        hnsw_index.set_ef(index.hnswlib_ef_search)
         DIM = collection.dimension
-        NUMVECTOR=len(vectors)
+        NUMVECTOR=index.count
 
         # verify elements
+        """
         ids = hnsw_index.get_ids_list()
         ids.sort()
         original_ids = [v.vector_id for v in vectors]
         original_ids.sort()
         assert(ids == original_ids)
+        """
         
         brute_force_index = hnswlib.BFIndex(space=index.metric, dim=DIM)
         brute_force_index.init_index(max_elements=NUMVECTOR)
 
-        for v in vectors:
-            brute_force_index.add_items([v.vector], [v.vector_id])
+        vv = [v.vector for v in vectors]
+        ids = [v.vector_id for v in vectors]
+        brute_force_index.add_items(vv, ids)
+        #for v in vectors:
+        #    brute_force_index.add_items([v.vector], [v.vector_id])
 
         test_elements = 200
         top_k = 10
@@ -151,7 +176,7 @@ def post_index(token: str = Depends(token_auth_scheme),
     Create New Index
     """
     user_id, user_team_ids = verified_user_id_teams(token)    
-        
+    
     with Session(engine) as session:
         
         # validate collection_id and user access to collection_id        

@@ -20,6 +20,7 @@ RUN pip3 install -r requirements.txt
 
 COPY app/s3_bucket ./s3_bucket
 COPY app/*.py .
+COPY app/results.json .
 
 #CMD gunicorn  -k uvicorn.workers.UvicornWorker main:app -b 0.0.0.0:8000 --access-logfile -
 
