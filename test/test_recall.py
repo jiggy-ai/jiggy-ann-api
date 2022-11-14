@@ -43,9 +43,6 @@ for vector_id in range(NUMVECTOR):
     assert(mse < 1e-12)
                      
 
-test_ef = 50
-hnsw_index.set_ef(test_ef)
-
 import hnswlib
 
 brute_force_index = hnswlib.BFIndex(space="l2", dim=DIM)
@@ -75,5 +72,5 @@ for i in range(test_elements):
 recall = float(correct) / total
 
 
-print("HNSW Search @ EF=%4d:  RECALL: %.1f %%" % (test_ef, 100*recall))
+print("HNSW Search @ EF=%4d:  RECALL: %.1f %%" % (ix.hnswlib_ef_search, 100*recall))
 collection.delete_collection()
