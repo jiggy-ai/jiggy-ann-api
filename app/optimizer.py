@@ -153,12 +153,12 @@ def optimize_hnswlib_params(vector_dimension,
 
     options.sort(key=lambda t:t[1]['recall'])
     if len(options):
+        print("optimize_hnswlib_params:")
         print(options[0])        
         x, p = options[0]        
     else:
         x, p = best
     x.update(p)
-    print(len(list(seen)))
     return x
 
 
