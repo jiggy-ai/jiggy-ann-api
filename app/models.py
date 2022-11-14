@@ -173,6 +173,7 @@ class IndexRequest(BaseModel):
         if value is None:
             if values['hnswlib_M'] is None or values['hnswlib_ef'] is None:
                 raise ValueError('If target_recall is non specified then both hnswlib_M and hnswlib_ef must be specified')
+            return None
         if value < .5 or value > 1:
             raise ValueError('target_recall must be between 0.5 and 1')
         if values['hnswlib_M'] is not None or values['hnswlib_ef'] is not None:
