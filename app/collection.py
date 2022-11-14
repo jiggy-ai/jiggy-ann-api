@@ -127,7 +127,6 @@ def get_collections(token: str = Depends(token_auth_scheme),
         else:
             statement = select(Collection).where(Collection.team_id == team_id)
         results = list(session.exec(statement))
-        print(results)
         return CollectionsGetResponse(items=results)
 
 

@@ -24,7 +24,8 @@ from decimal import Decimal
 import numpy as np
 from optimizer import optimize_hnswlib_params
 from s3 import  create_presigned_url, bucket
-
+import hashlib
+        
 from main import app, engine, token_auth_scheme
 
 from models import *
@@ -88,7 +89,6 @@ def _create_index(index):
         HNSW_INDEX_CREATE_TIME = time()-t0
         filename = "index-%d.hnsf" % index.id
         hnsw_index.save_index(filename)
-        import hashlib
         print("saved index md5=", hashlib.md5(open(filename,'rb').read()).hexdigest())
         
         INDEX_SIZE_BYTES = os.stat(filename).st_size
@@ -101,7 +101,7 @@ def _create_index(index):
         bucket.upload_file(filename, index.objkey)
 
         session.commit()
-        print("test")
+        print("test index")
         # Test the Index
         hnsw_index.set_ef(index.hnswlib_ef_search)
         DIM = collection.dimension
