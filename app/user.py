@@ -60,7 +60,7 @@ def create_api_user(username, email=None):
         member = TeamMember(team_id=team.id,
                             user_id=user.id,
                             invited_by=user.id,
-                            role=TeamRole.owner,
+                            role=TeamRole.admin,
                             accepted=True)
 
         session.add(member)

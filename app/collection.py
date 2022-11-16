@@ -108,20 +108,23 @@ def delete_collections_collection_id(token: str = Depends(token_auth_scheme),
         
 @app.get('/collections', response_model=CollectionsGetResponse)
 def get_collections(token: str = Depends(token_auth_scheme),
-                    team_id: int = Query(default=None, alias='team_id'),
+                    team_id: Optional[int] = Query(default=None, alias='team_id'),
                     name: Optional[str] = Query(default=None, alias='name')) -> CollectionsGetResponse:
     """
     Get all collections for the calling user's team,
-    or optinally the collection that marches the specified name.
+    or optionally the collection that matches the specified name.
     """
     user_id, user_team_ids = verified_user_id_teams(token)        
     with Session(engine) as session:
-        if team_id is None:
-            # team_id is not specified; use the user's default team
-            user = session.get(User, user_id)
-            team_id = user.default_team_id
-        elif team_id not in user_team_ids:  # validate user membership in the requested team
+        if team_id and team_id not in user_team_ids:  # validate user membership in the requested team
             raise HTTPException(status_code=404, detail="User is not a member of the specified team.")
+    
+        if team_id is None and name is not None:
+            # look for a name match in any of user's teams
+            statement = select(Collection).where(Collection.name == name)
+            results = [c for c in session.exec(statement) if c.team_id in user_team_ids]
+            return CollectionsGetResponse(items=results)
+        
         if name is not None:
             statement = select(Collection).where(Collection.team_id == team_id, Collection.name == name)
         else:

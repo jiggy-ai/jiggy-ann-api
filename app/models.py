@@ -347,10 +347,10 @@ class Team(SQLModel, table=True):
 
 
 class TeamRole(str, enum.Enum):
-    owner = 'owner'
-    admin = 'admin'
-    member = 'member'
-
+    admin   = 'admin'
+    member  = 'member'
+    service = 'service'
+    view    = 'view'
     
 class TeamMember(SQLModel, table=True):
     id: int = Field(primary_key=True, description="Internal membership id")
@@ -361,3 +361,14 @@ class TeamMember(SQLModel, table=True):
     invited_by: int = Field(index=True, description="The user that invited this member to the team.")
     role:  TeamRole = Field(sa_column=Column(Enum(TeamRole)), description="The user's role in the team")
     accepted: bool = Field(False, description='True if the user has accepted the team membership.')
+
+class TeamPostRequest(BaseModel):
+    name: str = Field(index=True, min_length=3, max_length=39, description='Unique name for this team.')
+    description: Optional[str] = Field(default=None, description='Optional user supplied description.')
+
+class TeamMemberPostRequest(BaseModel):
+    user_id: int = Field(description="The user_id of a member to invite to the team.")
+    role:  TeamRole = Field(description="The user's role in the team")
+
+class UserTeams(BaseModel):
+    items: List[Team] = Field(description="The list of all of the user's teams")
