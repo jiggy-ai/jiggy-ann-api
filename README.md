@@ -8,7 +8,7 @@ Vector search can be decomposed into 3 stages:
 
 With the Jiggy architecture, #1 and #2 are handled by the Jiggy service and #3 is handled in your own code by using hnswlib locally with the jiggy-generated index files (downloaded from the Jiggy service).
 
-Currently a demo version of this is running at api.jiggy.ai.
+Currently a demo version of this is running at api.jiggy.ai (see https://api.jiggy.ai/jiggy-v0/docs#/ for API doc).
 
 See https://github.com/jiggy-ai/jiggy-client-py/blob/master/quickstart.py 
 
