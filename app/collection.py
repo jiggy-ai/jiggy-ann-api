@@ -118,7 +118,15 @@ def get_collections(token: str = Depends(token_auth_scheme),
     with Session(engine) as session:
         if team_id and team_id not in user_team_ids:  # validate user membership in the requested team
             raise HTTPException(status_code=404, detail="User is not a member of the specified team.")
-    
+
+        if team_id is None and name is None:
+            # return all user collections
+            results = []
+            for tid in user_team_ids:
+                statement = select(Collection).where(Collection.team_id == tid)
+                results.extend(session.exec(statement))
+            return CollectionsGetResponse(items=results)
+            
         if team_id is None and name is not None:
             # look for a name match in any of user's teams
             statement = select(Collection).where(Collection.name == name)
