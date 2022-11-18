@@ -36,7 +36,51 @@ CPU_COUNT = psutil.cpu_count()
 ###
 ##  Index
 ###
+def _test_index(collection, index, vectors, hnsw_index, start_ef):
+        print("test index")
+        # Test the Index
 
+        DIM = collection.dimension
+        NUMVECTOR=index.count
+        
+        brute_force_index = hnswlib.BFIndex(space=index.metric, dim=DIM)
+        brute_force_index.init_index(max_elements=NUMVECTOR)
+
+        vv = [v.vector for v in vectors]
+        ids = [v.vector_id for v in vectors]
+        brute_force_index.add_items(vv, ids)
+
+        test_elements = 200
+        top_k = 10
+
+        # create test vectors
+        query_data = np.float32(np.random.random((test_elements, DIM)))
+
+        labels_bf, distances_bf = brute_force_index.knn_query(query_data, top_k)
+
+        correct = 0
+        total = 0
+
+        ef = start_ef
+        while True:
+            hnsw_index.set_ef(ef)
+            # Query the elements and measure recall:
+            labels_hnsw, distances_hnsw = hnsw_index.knn_query(query_data, top_k)
+
+            # recall calc:
+            for i in range(test_elements):
+                correct += len(set(labels_hnsw[i]) & set(labels_bf[i]))
+                total   += len(set(labels_hnsw[i]))
+            recall = float(correct) / total
+
+            print("HNSW Search @ EF=%4d:  RECALL: %.1f %%" % (ef, 100*recall))
+            if recall > .99 or ef >= collection.count and ef > hnsw_index.ef_construction:
+                break
+            ef *= 2
+
+
+    
+    
 def _create_index(index):
     with Session(engine) as session:
         print("create_index:", index)
@@ -79,9 +123,7 @@ def _create_index(index):
         ids = [v.vector_id for v in vectors]
         hnsw_index.add_items(vv, ids)
 
-        #for v in vectors:
-        #    hnsw_index.add_items([v.vector], [v.vector_id])
-        #    # XXX add progress percentage update
+        # XXX add progress percentage update
 
         index.build_status = "Saving index."
         index.state = IndexBuildState.saving
@@ -99,57 +141,8 @@ def _create_index(index):
                                                                                                                                INDEX_SIZE_BYTES/1024/1024)
         index.state = IndexBuildState.complete
         bucket.upload_file(filename, index.objkey)
-
         session.commit()
-        print("test index")
-        # Test the Index
-        hnsw_index.set_ef(index.hnswlib_ef_search)
-        DIM = collection.dimension
-        NUMVECTOR=index.count
-
-        # verify elements
-        """
-        ids = hnsw_index.get_ids_list()
-        ids.sort()
-        original_ids = [v.vector_id for v in vectors]
-        original_ids.sort()
-        assert(ids == original_ids)
-        """
-        
-        brute_force_index = hnswlib.BFIndex(space=index.metric, dim=DIM)
-        brute_force_index.init_index(max_elements=NUMVECTOR)
-
-        vv = [v.vector for v in vectors]
-        ids = [v.vector_id for v in vectors]
-        brute_force_index.add_items(vv, ids)
-        #for v in vectors:
-        #    brute_force_index.add_items([v.vector], [v.vector_id])
-
-        test_elements = 200
-        top_k = 10
-
-        # create test vectors
-        query_data = np.float32(np.random.random((test_elements, DIM)))
-
-        labels_bf, distances_bf = brute_force_index.knn_query(query_data, top_k)
-
-        correct = 0
-        total = 0
-
-        # Query the elements and measure recall:
-        labels_hnsw, distances_hnsw = hnsw_index.knn_query(query_data, top_k)
-
-        # recall calc:
-        for i in range(test_elements):
-            correct += len(set(labels_hnsw[i]) & set(labels_bf[i]))
-            total   += len(set(labels_hnsw[i]))
-        recall = float(correct) / total
-
-        print("HNSW Search @ EF=%4d:  RECALL: %.1f %%" % (index.hnswlib_ef_search, 100*recall))
-        
-        # Test the Index
-        # Delete the Index
-        os.unlink(filename)
+        _test_index(collection, index, vectors, hnsw_index, index.hnswlib_ef_search//2)
         
 def create_index(index):
     try:
