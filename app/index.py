@@ -145,7 +145,7 @@ def _create_index(index):
             total   += len(set(labels_hnsw[i]))
         recall = float(correct) / total
 
-        print("HNSW Search @ EF=%4d:  RECALL: %.1f %%" % (index.hnswlib_ef, 100*recall))
+        print("HNSW Search @ EF=%4d:  RECALL: %.1f %%" % (index.hnswlib_ef_search, 100*recall))
         
         # Test the Index
         # Delete the Index
