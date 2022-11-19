@@ -120,11 +120,12 @@ class DistanceMetric(str, enum.Enum):
     l2     = 'l2'
 
 class IndexBuildState(str, enum.Enum):
-    prep = "preparing data"
+    prep     = "preparing data"
     indexing = "indexing vectors"
-    saving = "saving index"
+    saving   = "saving index"
+    testing  = "testing index"
     complete = "index complete"
-    failed = "indexing failure"
+    failed   = "indexing failure"
     
     
 class Index(SQLModel, table=True):
@@ -147,19 +148,20 @@ class Index(SQLModel, table=True):
     target_recall: Optional[float] = Field(default=None, ge=0.5, le=1, description="The desired recall value to target for index parameter optimization.")
     
     count: int = Field(default=0, description="The number of vectors included in the index.  The number of vectors in the collection at the time of index build.")
-    
+
     created_at: timestamp = Field(default_factory=time, description='The epoch timestamp when the index was requested to be created.')
     state: IndexBuildState = Field(sa_column=Column(Enum(IndexBuildState)))
     completed_at: timestamp = Field(description='The epoch timestamp when the index build was completed.')
     build_status: str     = Field(description='Informational status message for the index build.')
-    objkey: str = Field(description='The index key name in object store')
-        
+    # TODO: add index size in bytes and index shasum
+    objkey: str = Field(description='The index key name in object store')        
     
     @validator('tag')
     def _tag(cls, v):
         _is_valid_namestr(v, 'tag')
         return v
 
+    
 class IndexRequest(BaseModel):
     tag: str = Field(default='latest', description="User tag for this Index.  Uniquely identifies an index in the context of a collection.")
     target_library:    IndexLibraries = Field(default=IndexLibraries.hnswlib, description="The library use to create the index")
@@ -205,7 +207,6 @@ class IndexResponse(BaseModel):
     url: Optional[str] = Field(default=None, description='The url the index can be downloaded from. The url is valid for a limited time.')
 
 
-
 class CollectionsIndexGetResponse(BaseModel):
     items: List[IndexResponse] = Field(..., description='List of collection index')
 
@@ -216,40 +217,29 @@ class CollectionsIndexGetResponse(BaseModel):
 ###
 
 class IndexTest(SQLModel, table=True):
-
-    id: int = Field(default=None,
-                    primary_key=True,
-                    description='Unique database identifier for a given index test.')
-    
-    index_id: int = Field(foreign_key="index.id",
-                          index=True,
-                          description='Unique index under test.')
-
-    test_k:     int  = Field(default=10, description="The number of nearest neighbors (k) to query for each test vector.")
-    
-    hnswlib_ef: int  = Field(default=None, description="The ef value passed to hnswlib when testing the index")
-                               
-    created_at: timestamp = Field(default_factory=time, description='The epoch timestamp when the test was requested.')
-    completed_at: timestamp = Field(default_factory=time, description='The epoch timestamp when the index build was completed.')
-    
-    recall: float = Field(default=0, description="The recall of the index.")
-    qps:    float = Field(default=0, description="The qps of the index.")
+    id:                   int = Field(primary_key=True,
+                                      description='Unique database identifier for a given index test.')
+    index_id:             int = Field(foreign_key="index.id",
+                                      index=True,
+                                      description='The index under test.')
+    test_count:           int = Field(description="The number of vectors in the test sample.")
+    test_k:               int = Field(description="The number of nearest neighbors (k) to query for each test vector.")
+    recall:             float = Field(description="The recall of the index based on a comparison to exhaustive KNN.")
+    qps:                float = Field(description="The estimated queries per second of the index for vector search with batchsize of 1 (a single vector at a time).")
+    cpu_info:             str = Field(description="The CPU that executed the test.")
+    created_at:     timestamp = Field(default_factory=time, description='The epoch timestamp when the test was completed.')
+    hnswlib_ef: Optional[int] = Field(default=None, description="The ef value passed to hnsw_index.set_ef() for this test.")
     
 
-
-
-class HnswlibTestResult(BaseModel):
-    index_id:    int = Field(description='Unique index under test.')    
-    hnswlib_ef: int  = Field(default=None, description="The recall of the index.")
-    recall:    float = Field(description="The qps of the index.")
-    qps:    float = Field(description="The qps of the index.")    
-
-
+class IndexTestResponse(BaseModel):
+    items: List[IndexTest] = Field(description="The list of the test results for a given index")
 
 
 
     
-
+###
+##  Work in Progress
+###
     
 class PendingVector(SQLModel, table=True):
     id: int = Field(default=None,

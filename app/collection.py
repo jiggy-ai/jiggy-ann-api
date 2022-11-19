@@ -94,10 +94,11 @@ def delete_collections_collection_id(token: str = Depends(token_auth_scheme),
             raise HTTPException(status_code=404, detail="Collection not found")
         # delete all vector data
         statement = delete(Vector).where(Vector.collection_id == collection_id)
-        # delete all index adata
         session.exec(statement)
+        # delete all index data
         statement = select(Index).where(Index.collection_id == collection_id)
         for index in session.exec(statement):
+            session.exec(delete(IndexTest).where(IndexTest.index_id == index.id))
             bucket.delete(index.objkey)
             session.delete(index)
         # delete the collection
