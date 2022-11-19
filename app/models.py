@@ -232,8 +232,8 @@ class IndexTest(SQLModel, table=True):
     created_at: timestamp = Field(default_factory=time, description='The epoch timestamp when the test was requested.')
     completed_at: timestamp = Field(default_factory=time, description='The epoch timestamp when the index build was completed.')
     
-    recall: Optional[float] = Field(default=0, description="The recall of the index.")
-    qps:    Optional[float] = Field(default=0, description="The qps of the index.")
+    recall: float = Field(default=0, description="The recall of the index.")
+    qps:    float = Field(default=0, description="The qps of the index.")
     
 
 
@@ -241,7 +241,8 @@ class IndexTest(SQLModel, table=True):
 class HnswlibTestResult(BaseModel):
     index_id:    int = Field(description='Unique index under test.')    
     hnswlib_ef: int  = Field(default=None, description="The recall of the index.")
-    recall:    float = Field(default=0, description="The qps of the index.")
+    recall:    float = Field(description="The qps of the index.")
+    qps:    float = Field(description="The qps of the index.")    
 
 
 

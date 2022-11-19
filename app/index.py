@@ -73,7 +73,22 @@ def _test_index(collection, index, vectors, hnsw_index, start_ef):
                 total   += len(set(labels_hnsw[i]))
             recall = float(correct) / total
 
-            print("HNSW Search @ EF=%4d:  RECALL: %.1f %%" % (ef, 100*recall))
+            t0 = time()
+            N = 20
+            for i in range(N):                
+                hnsw_index.knn_query([query_data[i]], top_k)
+            qps = N / (time()-t0)
+
+            print("HNSW Search @ EF=%4d:  RECALL: %4.1f %%    QPS: %.1f" % (ef, 100*recall, qps))
+            
+            result = TestResult(index_id = index.id,
+                                test_k   = top_k,
+                                hnsw_ef  = ef,
+                                recall   = recall,
+                                qps      = qps)
+            
+            session.add(result)
+            session.commit()
             if recall > .99 or ef >= collection.count and ef > hnsw_index.ef_construction:
                 break
             ef *= 2
