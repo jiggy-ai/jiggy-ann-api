@@ -88,6 +88,23 @@ def post_apikey(token: str = Depends(token_auth_scheme),
     return create_apikey(user_id, body.description)
 
 
+
+@app.get("/apikey", response_model=AllApiKeyResponse)
+def get_apikey(token: str = Depends(token_auth_scheme)) -> AllApiKeyResponse:
+    """
+    return all of the user's API keys
+    """
+    user_id = verified_user_id(token)        
+    with Session(engine) as session:
+        statement = select(ApiKey).where(ApiKey.user_id == user_id)
+        keys = list(session.execute(statement))
+        print(keys)
+        print(keys[0])
+
+        
+        return AllApiKeyResponse(items=keys)
+
+
 from user import create_api_user
 
 

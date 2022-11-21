@@ -300,10 +300,16 @@ class AccountCreateRequest(BaseModel):
 class  ApiKeyResponse(BaseModel):
     key: str = Field(default=None, description='The api key.')
     description: Optional[str] = Field(default=None, description='Optional user supplied description of the key.')
-    created_at: timestamp = Field(default_factory=time, description='The epoch timestamp when the key was created.')
-    last_used : timestamp = Field(default_factory=time, description='The epoch timestamp when the key was last used to create a JWT.')
+    created_at: timestamp = Field(description='The epoch timestamp when the key was created.')
+    last_used : timestamp = Field(description='The epoch timestamp when the key was last used to create a JWT.')
     
-    
+
+
+class AllApiKeyResponse(BaseModel):
+    items: list[ApiKey] = Field(description="List of all Api Keys")
+
+
+
 class AuthRequest(BaseModel):
     key : str = Field(description = "The API key")
     
