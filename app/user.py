@@ -89,7 +89,7 @@ def post_users(token: str = Depends(token_auth_scheme), body: UserPostRequest = 
     
     with Session(engine) as session:
         # verify auth0 id does not exist
-        statement = select(User).where(User.auth0_id == auth0_id)
+        statement = select(User).where(User.auth0_userid == auth0_id)
         if session.exec(statement).first():
             raise HTTPException(status_code=400, detail="The authenticated user already exists.")
 
@@ -97,19 +97,22 @@ def post_users(token: str = Depends(token_auth_scheme), body: UserPostRequest = 
         if list(session.exec(statement)):
             raise HTTPException(status_code=409, detail="The specified username is not available.")
 
+        # create user's own team
         team = Team(name=username)
         session.add(team)
         session.commit()
         session.refresh(team)
 
+        # create user's object, with default team of his own team        
         user = User(**body.dict(exclude_unset=True),
                     default_team_id=team.id,
-                    auth0_id = auth0_id)
+                    auth0_userid = auth0_id)
         
         session.add(user)
         session.commit()
         session.refresh(user)
-        
+
+        # Add user as member of his own team
         member = TeamMember(team_id=team.id,
                             user_id=user.id,
                             invited_by=user.id,
@@ -117,6 +120,12 @@ def post_users(token: str = Depends(token_auth_scheme), body: UserPostRequest = 
                             accepted=True)
 
         session.add(member)
+
+        # create apikey for user
+        key = ApiKey(user_id = user.id,
+                     key = "jgy-" + "".join([sample(ascii_lowercase,1)[0] for x in range(48)]))
+    
+        session.add(key)
         session.commit()
 
         return user

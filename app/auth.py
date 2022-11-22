@@ -84,8 +84,10 @@ def verified_user_id(token):
         token_payload = verify_auth0_token(token.credentials)
         auth0_id = token_payload['sub']
         with Session(engine) as session:
-            statement = select(User).where(User.auth0_id == auth0_id)
-            user_id = session.exec(statement).first().id
+            statement = select(User).where(User.auth0_userid == auth0_id)
+            user = session.exec(statement).first()
+            if user is None:
+                raise HTTPException(status_code=400, detail="No user object found for auth0 subject. Must first create user.")
     return user_id
 
 
