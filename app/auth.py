@@ -89,6 +89,10 @@ def verified_user_id(token):
     return user_id
 
 
+
+
+
+
 user_teams = {}   # XXX expiring dict or a real cache
 
 def verified_user_id_teams(token):

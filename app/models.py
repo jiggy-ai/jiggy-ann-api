@@ -330,7 +330,15 @@ class User(SQLModel, table=True):
     default_team_id: int = Field(description="The default team for this user")
 
 
+class UserPostRequest(BaseModel):
+    username: str = Field(min_length=3, max_length=39, description='Unique name for the user.')
+    
 
+class UserPostPatchRequest(BaseModel):
+    default_team_id: Optional[int] = Field(description="The default team for this user")
+    username: Optional[str] = Field(min_length=3, max_length=39, description='Unique name for the user.')
+
+    
 ###
 ## Team
 ###

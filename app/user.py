@@ -24,8 +24,8 @@ import jwt
 from string import ascii_lowercase
 from random import sample
 
-from main import app, engine #, token_auth_scheme, optional_token_auth_scheme, get_user_by_auth0_id
-
+from main import app, engine, token_auth_scheme
+from auth import *
 from models import *
 
 
@@ -33,7 +33,7 @@ from models import *
 def create_api_user(username, email=None):
     """
     Create a new user via API.  
-    Returns the new user database object
+    Returns the new user id
     """
 
     with Session(engine) as session:
@@ -68,3 +68,73 @@ def create_api_user(username, email=None):
         
         # XXX send email to user to facilitate full account creation and linkage to API key
         return user.id
+
+
+
+
+###
+### Users
+###
+
+@app.post('/users', response_model=User)
+def post_users(token: str = Depends(token_auth_scheme), body: UserPostRequest = ...) -> User:
+    """
+    Create new User and associate it with the auth0 token used to authenticate this call.
+    This can only be called by a frontend user authenticated via auth0;
+    An API Key can not be used to create a new user.
+    """
+
+    token_payload = verify_auth0_token(token)
+    auth0_id = token_payload['sub']
+    
+    with Session(engine) as session:
+        # verify auth0 id does not exist
+        statement = select(User).where(User.auth0_id == auth0_id)
+        if session.exec(statement).first():
+            raise HTTPException(status_code=400, detail="The authenticated user already exists.")
+
+        statement = select(User).where(User.username == username)
+        if list(session.exec(statement)):
+            raise HTTPException(status_code=409, detail="The specified username is not available.")
+
+        team = Team(name=username)
+        session.add(team)
+        session.commit()
+        session.refresh(team)
+
+        user = User(**body.dict(exclude_unset=True),
+                    default_team_id=team.id,
+                    auth0_id = auth0_id)
+        
+        session.add(user)
+        session.commit()
+        session.refresh(user)
+        
+        member = TeamMember(team_id=team.id,
+                            user_id=user.id,
+                            invited_by=user.id,
+                            role=TeamRole.admin,
+                            accepted=True)
+
+        session.add(member)
+        session.commit()
+
+        return user
+
+
+
+
+@app.get('/users/current', response_model=User)
+def get_users_current(token: str = Depends(token_auth_scheme)) -> User:
+    """
+    return the authenticated user
+    """
+    user_id = verified_user_id(token)
+    with Session(engine) as session:
+        return session.get(User, user_id)
+
+
+
+
+
+
