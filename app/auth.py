@@ -25,10 +25,10 @@ JWT_ISSUER = "Jiggy.AI"
 
 
 
-def verify_jiggy_api_token(token):
+def verify_jiggy_api_token(credentials):
     """Perform Jiggy API token verification using PyJWT.  raise HTTPException on error"""
 
-    # This gets the 'kid' from the passed token
+    # This gets the 'kid' from the passed token credentials
     try:
         signing_key = JWT_RSA_PUBLIC_KEY
     except jwt.exceptions.PyJWKClientError as error:
@@ -39,7 +39,7 @@ def verify_jiggy_api_token(token):
         raise HTTPException(status_code=401, detail=str(error))
     
     try:
-        payload = jwt.decode(token,
+        payload = jwt.decode(credentials,
                              signing_key,
                              algorithms=ALGORITHMS,
                              issuer=JWT_ISSUER)
@@ -48,11 +48,11 @@ def verify_jiggy_api_token(token):
     return payload
 
     
-def verify_auth0_token(token):
+def verify_auth0_token(credentials):
     """Perform auth0 token verification using PyJWT.  raise HTTPException on error"""
     # This gets the 'kid' from the passed token
     try:
-        signing_key = jwks_client.get_signing_key_from_jwt(token).key
+        signing_key = jwks_client.get_signing_key_from_jwt(credentials).key
     except jwt.exceptions.PyJWKClientError as error:
         raise HTTPException(status_code=401, detail=str(error))
     except jwt.exceptions.DecodeError as error:
@@ -61,7 +61,7 @@ def verify_auth0_token(token):
         raise HTTPException(status_code=401, detail=str(error))
     
     try:
-        payload = jwt.decode(token,
+        payload = jwt.decode(credentials,
                              signing_key,
                              algorithms=ALGORITHMS,
                              audience=API_AUDIENCE,
@@ -88,6 +88,7 @@ def verified_user_id(token):
             user = session.exec(statement).first()
             if user is None:
                 raise HTTPException(status_code=400, detail="No user object found for auth0 subject. Must first create user.")
+            user_id = user.id
     return user_id
 
 

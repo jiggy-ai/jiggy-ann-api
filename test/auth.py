@@ -46,5 +46,15 @@ s.headers.update({"authorization": "Bearer %s" % token})
 
 
 r = s.get("/users/current")
+if r.status_code == 200:
+    # delete user
+    user_id = r.json()['id']
+    print("delete user_id", user_id)
+    r = s.delete(f"/users/{user_id}")
+    if r.status_code != 200: print(r.content)
+    assert(r.status_code==200)
+
+r = s.post("/users", json={'username': "foobar"})
 print(r.status_code)
 print(r.text)
+

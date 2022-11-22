@@ -13,7 +13,7 @@ import string
 import random
 from time import time
 import os
-from sqlmodel import Session, select, or_
+from sqlmodel import Session, select, delete, or_
 from sqlalchemy.orm.exc import NoResultFound
 from sqlalchemy.orm.exc import MultipleResultsFound
 from threading import Thread
@@ -84,21 +84,19 @@ def post_users(token: str = Depends(token_auth_scheme), body: UserPostRequest = 
     An API Key can not be used to create a new user.
     """
 
-    token_payload = verify_auth0_token(token)
+    token_payload = verify_auth0_token(token.credentials)
     auth0_id = token_payload['sub']
-    
     with Session(engine) as session:
         # verify auth0 id does not exist
         statement = select(User).where(User.auth0_userid == auth0_id)
         if session.exec(statement).first():
             raise HTTPException(status_code=400, detail="The authenticated user already exists.")
 
-        statement = select(User).where(User.username == username)
+        statement = select(User).where(User.username == body.username)
         if list(session.exec(statement)):
             raise HTTPException(status_code=409, detail="The specified username is not available.")
-
         # create user's own team
-        team = Team(name=username)
+        team = Team(name=body.username)
         session.add(team)
         session.commit()
         session.refresh(team)
@@ -111,7 +109,6 @@ def post_users(token: str = Depends(token_auth_scheme), body: UserPostRequest = 
         session.add(user)
         session.commit()
         session.refresh(user)
-
         # Add user as member of his own team
         member = TeamMember(team_id=team.id,
                             user_id=user.id,
@@ -124,10 +121,9 @@ def post_users(token: str = Depends(token_auth_scheme), body: UserPostRequest = 
         # create apikey for user
         key = ApiKey(user_id = user.id,
                      key = "jgy-" + "".join([sample(ascii_lowercase,1)[0] for x in range(48)]))
-    
         session.add(key)
         session.commit()
-
+        session.refresh(user)
         return user
 
 
@@ -146,4 +142,21 @@ def get_users_current(token: str = Depends(token_auth_scheme)) -> User:
 
 
 
+@app.delete('/users/{user_id}')
+def delete_users_user_id(token: str = Depends(token_auth_scheme),
+                         user_id: str = Path(...)):
+    """
+    Delete specified user
+    """
+    token_user_id = verified_user_id(token)
+    if int(token_user_id) != int(user_id):
+        raise HTTPException(status_code=401, detail="Authenticated user does not match the requested user_id")
+    
+    with Session(engine) as session:
+        user = session.get(User, user_id)
+        session.exec(delete(TeamMember).where(TeamMember.user_id == user_id))
+        session.exec(delete(ApiKey).where(ApiKey.user_id == user_id))
+        session.exec(delete(Team).where(Team.name == user.username))
+        session.delete(user)
+        session.commit()
 
