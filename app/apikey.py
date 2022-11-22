@@ -97,11 +97,7 @@ def get_apikey(token: str = Depends(token_auth_scheme)) -> AllApiKeyResponse:
     user_id = verified_user_id(token)        
     with Session(engine) as session:
         statement = select(ApiKey).where(ApiKey.user_id == user_id)
-        keys = list(session.execute(statement))
-        print(keys)
-        print(keys[0])
-
-        
+        keys = list(session.exec(statement))
         return AllApiKeyResponse(items=keys)
 
 

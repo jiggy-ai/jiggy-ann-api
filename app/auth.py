@@ -11,7 +11,7 @@ from main import engine
 from models import *
 
 DOMAIN = "auth.jiggy.ai"
-API_AUDIENCE = "https://jiggy-ai/api"
+API_AUDIENCE = "https://api.jiggy.ai"
 ALGORITHMS = ["RS256"]
 ISSUER = "https://"+DOMAIN+"/"
 
@@ -83,7 +83,7 @@ def verified_user_id(token):
         # check if it is an auth0-issued token
         token_payload = verify_auth0_token(token.credentials)
         auth0_id = token_payload['sub']
-        with Session(engine) as session:    
+        with Session(engine) as session:
             statement = select(User).where(User.auth0_id == auth0_id)
             user_id = session.exec(statement).first().id
     return user_id
