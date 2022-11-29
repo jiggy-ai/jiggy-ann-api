@@ -1,5 +1,7 @@
 Jiggy is an open source vector persistence and indexing service build around hnswlib (with support for faiss/autofaiss in the future).
 
+This is in an experimental form and not suitable for large vector collections or production use cases.
+
 Vector search can be decomposed into 3 stages:
 
 1) Vector Persistence
